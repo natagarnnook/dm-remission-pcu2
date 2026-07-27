@@ -8,12 +8,15 @@
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- React 18 & ReactDOM CDN (Cloudflare CDNJS - Fast & Reliable in Thailand) -->
+  <!-- React 18 & ReactDOM CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
   
   <!-- Babel Standalone CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js" crossorigin="anonymous"></script>
+
+  <!-- Supabase JS Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
@@ -35,81 +38,9 @@
     <div className="min-h-screen flex flex-col justify-center items-center bg-slate-900 text-white p-6 text-center">
       <div className="w-12 h-12 border-4 border-teal-400 border-t-transparent rounded-full animate-spin mb-4"></div>
       <h2 className="text-lg font-bold">กำลังโหลดระบบ DM Remission Clinic PCU2 ศรีพิมาน...</h2>
-      <p className="text-xs text-slate-400 mt-2">กำลังโหลดประวัติผู้ป่วยและระบบบันทึกความจำ</p>
+      <p className="text-xs text-slate-400 mt-2">กำลังเชื่อมต่อฐานข้อมูลและประวัติผู้ป่วย</p>
     </div>
   </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'dm-clinic-pcu2-sripiman';
-    let firebaseConfig = null;
-    try {
-      if (typeof __firebase_config !== 'undefined') {
-        firebaseConfig = JSON.parse(__firebase_config);
-      }
-    } catch(e) {
-      console.warn("Firebase config not set; using local storage mode.");
-    }
-
-    let app = null, auth = null, db = null;
-    if (firebaseConfig && firebaseConfig.apiKey) {
-      app = initializeApp(firebaseConfig);
-      auth = getAuth(app);
-      db = getFirestore(app);
-    }
-
-    window.CloudDB = {
-      isConfigured: !!db,
-      init: async (onPatientsChange, onUsersChange) => {
-        if (!db) return;
-        try {
-          await signInAnonymously(auth);
-          const patientsRef = collection(db, 'artifacts', appId, 'public', 'data', 'patients');
-          onSnapshot(patientsRef, (snapshot) => {
-            const list = [];
-            snapshot.forEach((d) => list.push(d.data()));
-            if (list.length > 0) onPatientsChange(list);
-          });
-
-          const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-          onSnapshot(usersRef, (snapshot) => {
-            const list = [];
-            snapshot.forEach((d) => list.push(d.data()));
-            if (list.length > 0) onUsersChange(list);
-          });
-        } catch (error) {
-          console.error("Cloud DB Init Error:", error);
-        }
-      },
-      savePatient: async (patient) => {
-        if (!db || !auth?.currentUser) return;
-        try {
-          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'patients', patient.id), patient);
-        } catch (e) { console.error("Error saving patient to cloud:", e); }
-      },
-      deletePatient: async (patientId) => {
-        if (!db || !auth?.currentUser) return;
-        try {
-          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'patients', patientId));
-        } catch (e) { console.error("Error deleting patient from cloud:", e); }
-      },
-      saveUser: async (userObj) => {
-        if (!db || !auth?.currentUser) return;
-        try {
-          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userObj.id), userObj);
-        } catch (e) { console.error("Error saving user to cloud:", e); }
-      },
-      deleteUser: async (userId) => {
-        if (!db || !auth?.currentUser) return;
-        try {
-          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userId));
-        } catch (e) { console.error("Error deleting user from cloud:", e); }
-      }
-    };
-  </script>
 
   <script>
     window.addEventListener('error', function(e) {
@@ -171,6 +102,7 @@
         case 'trash-2': return <svg {...props}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
         case 'user-check': return <svg {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>;
         case 'cloud': return <svg {...props}><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>;
+        case 'database': return <svg {...props}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>;
         default: return <svg {...props}><circle cx="12" cy="12" r="10"/></svg>;
       }
     };
@@ -238,6 +170,15 @@
     ];
 
     function App() {
+      // Supabase credentials state
+      const [supabaseUrl, setSupabaseUrl] = useState(() => localStorage.getItem('DM_SUPABASE_URL') || '');
+      const [supabaseKey, setSupabaseKey] = useState(() => localStorage.getItem('DM_SUPABASE_KEY') || '');
+      const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
+      const [supabaseStatus, setSupabaseStatus] = useState('local'); // 'local', 'connected', 'error'
+
+      // Supabase Client Instance Reference
+      const [supabaseClient, setSupabaseClient] = useState(null);
+
       const [users, setUsers] = useState(() => {
         try {
           const saved = localStorage.getItem('DM_CLINIC_USERS');
@@ -252,7 +193,7 @@
         } catch(e) { return initialPatients; }
       });
 
-      const [currentUser, setCurrentUser] = useState(null);
+      const [currentUser, setCurrentUser] = useState(null); // Requires login on startup
       const [authMode, setAuthMode] = useState('login');
       
       const [regName, setRegName] = useState('');
@@ -315,13 +256,84 @@
       }, [users]);
 
       useEffect(() => {
-        if (window.CloudDB && window.CloudDB.isConfigured) {
-          window.CloudDB.init(
-            (cloudPatients) => { if (cloudPatients?.length > 0) setPatients(cloudPatients); },
-            (cloudUsers) => { if (cloudUsers?.length > 0) setUsers(cloudUsers); }
-          );
+        if (supabaseUrl && supabaseKey && window.supabase) {
+          try {
+            const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+            setSupabaseClient(client);
+            setSupabaseStatus('connected');
+
+            // Fetch patients from Supabase
+            client.from('patients').select('*').then(({ data, error }) => {
+              if (error) {
+                console.error("Supabase fetch patients error:", error);
+                setSupabaseStatus('error');
+              } else if (data && data.length > 0) {
+                setPatients(data);
+              }
+            });
+
+            // Fetch users from Supabase
+            client.from('users').select('*').then(({ data, error }) => {
+              if (error) console.error("Supabase fetch users error:", error);
+              else if (data && data.length > 0) {
+                setUsers(data);
+              }
+            });
+
+          } catch(err) {
+            console.error("Supabase init error:", err);
+            setSupabaseStatus('error');
+          }
+        } else {
+          setSupabaseStatus('local');
         }
-      }, []);
+      }, [supabaseUrl, supabaseKey]);
+
+      const saveSupabaseCredentials = (url, key) => {
+        localStorage.setItem('DM_SUPABASE_URL', url.trim());
+        localStorage.setItem('DM_SUPABASE_KEY', key.trim());
+        setSupabaseUrl(url.trim());
+        setSupabaseKey(key.trim());
+        setIsSupabaseModalOpen(false);
+        setInfoMessage("บันทึกการเชื่อมต่อ Supabase เรียบร้อยแล้ว!");
+        setTimeout(() => setInfoMessage(null), 4000);
+      };
+
+      const syncPatientToSupabase = async (patientObj) => {
+        if (supabaseClient) {
+          try {
+            const { error } = await supabaseClient.from('patients').upsert(patientObj);
+            if (error) console.error("Supabase save patient error:", error);
+          } catch(e) { console.error("Supabase sync patient failed:", e); }
+        }
+      };
+
+      const deletePatientFromSupabase = async (patientId) => {
+        if (supabaseClient) {
+          try {
+            const { error } = await supabaseClient.from('patients').delete().eq('id', patientId);
+            if (error) console.error("Supabase delete patient error:", error);
+          } catch(e) { console.error("Supabase delete patient failed:", e); }
+        }
+      };
+
+      const syncUserToSupabase = async (userObj) => {
+        if (supabaseClient) {
+          try {
+            const { error } = await supabaseClient.from('users').upsert(userObj);
+            if (error) console.error("Supabase save user error:", error);
+          } catch(e) { console.error("Supabase sync user failed:", e); }
+        }
+      };
+
+      const deleteUserFromSupabase = async (userId) => {
+        if (supabaseClient) {
+          try {
+            const { error } = await supabaseClient.from('users').delete().eq('id', userId);
+            if (error) console.error("Supabase delete user error:", error);
+          } catch(e) { console.error("Supabase delete user failed:", e); }
+        }
+      };
 
       const formatMedsToString = (medsObj) => {
         const list = [];
@@ -359,7 +371,7 @@
         };
         setUsers(prev => [...prev, newUser]);
         setCurrentUser(newUser);
-        if (window.CloudDB) window.CloudDB.saveUser(newUser);
+        syncUserToSupabase(newUser);
         setRegName(''); setRegEmail(''); setRegPin(''); setAuthError('');
         setInfoMessage(`ลงทะเบียนสำเร็จ! ยินดีต้อนรับ คุณ ${newUser.name}`);
         setTimeout(() => setInfoMessage(null), 4000);
@@ -395,7 +407,7 @@
           status: "approved"
         };
         setUsers(prev => [...prev, newUser]);
-        if (window.CloudDB) window.CloudDB.saveUser(newUser);
+        syncUserToSupabase(newUser);
         setNewAdminUserName(''); setNewAdminUserEmail(''); setNewAdminUserPin('');
         setInfoMessage(`เพิ่มผู้ใช้งานใหม่ (${newUser.name}) เรียบร้อยแล้ว`);
         setTimeout(() => setInfoMessage(null), 4000);
@@ -408,14 +420,14 @@
           return;
         }
         setUsers(prev => prev.filter(u => u.id !== userId));
-        if (window.CloudDB) window.CloudDB.deleteUser(userId);
+        deleteUserFromSupabase(userId);
         setInfoMessage("ลบบัญชีผู้ใช้งานสำเร็จ");
         setTimeout(() => setInfoMessage(null), 3000);
       };
 
       const handleDeletePatient = (patientId) => {
         setPatients(prev => prev.filter(p => p.id !== patientId));
-        if (window.CloudDB) window.CloudDB.deletePatient(patientId);
+        deletePatientFromSupabase(patientId);
         if (selectedPatientId === patientId) {
           const remaining = patients.filter(p => p.id !== patientId);
           setSelectedPatientId(remaining.length > 0 ? remaining[0].id : null);
@@ -591,7 +603,7 @@
         };
 
         setPatients(prev => [newPatient, ...prev]);
-        if (window.CloudDB) window.CloudDB.savePatient(newPatient);
+        syncPatientToSupabase(newPatient);
 
         setSelectedPatientId(newId);
         setFormData({ firstName: '', lastName: '', age: '', diagnosedYear: '', comorbidities: '', weight: '', height: '', hba1c: '', status: 'same', hasGlucometer: false, stoppedDate: '' });
@@ -650,8 +662,8 @@
           return p;
         }));
 
-        if (updatedPatientObj && window.CloudDB) {
-          window.CloudDB.savePatient(updatedPatientObj);
+        if (updatedPatientObj) {
+          syncPatientToSupabase(updatedPatientObj);
         }
 
         setVisitFormData({
@@ -846,7 +858,7 @@
                 <p className="text-teal-400 text-xs text-center font-bold uppercase tracking-wider mt-1">ระบบเข้าสู่ระบบเพื่อเข้าถึงข้อมูลผู้ป่วย</p>
               </div>
 
-              {/* Quick Login Options for ease of testing */}
+              {/* Quick Login Options */}
               <div className="bg-slate-900/80 p-3 rounded-2xl border border-teal-500/30 mb-6 text-center space-y-2">
                 <span className="text-xs text-teal-300 font-bold block">⚡ เข้าสู่ระบบด่วน 1-Click:</span>
                 <div className="flex gap-2">
@@ -1025,9 +1037,19 @@
                 </div>
                 <div className="flex items-center gap-2 text-teal-200 text-xs">
                   <span>ระบบจัดการประวัติและติดตามเป้าหมายเบาหวานสงบ</span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center gap-1 font-bold">
-                    <Icon name="cloud" size={12}/> บันทึกลงเครื่องถาวร (LocalStorage)
-                  </span>
+                  
+                  {/* Supabase Connection Status Badge */}
+                  <button
+                    onClick={() => setIsSupabaseModalOpen(true)}
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold flex items-center gap-1.5 transition cursor-pointer ${
+                      supabaseStatus === 'connected' 
+                        ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 hover:bg-emerald-500/40' 
+                        : 'bg-amber-500/30 text-amber-200 border border-amber-400/50 hover:bg-amber-500/40'
+                    }`}
+                  >
+                    <Icon name="database" size={12}/>
+                    {supabaseStatus === 'connected' ? '⚡ เชื่อมต่อ Supabase Cloud' : '☁️ ตั้งค่า Supabase Cloud'}
+                  </button>
                 </div>
               </div>
 
@@ -1071,7 +1093,7 @@
             </div>
           </header>
 
-          {}
+          {/* Main Workspace Content Area */}
           <main className="max-w-7xl mx-auto px-4 py-8 md:px-8">
             
             {activeTab === 'dashboard' && (
@@ -1081,7 +1103,7 @@
                     <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                       <Icon name="activity" className="text-teal-600" size={22}/> สถิติรวมของคลินิก ณ ปัจจุบัน
                     </h2>
-                    <p className="text-sm text-slate-500">ข้อมูลสถิติคำนวณแบบสดจากทะเบียนผู้ป่วยเบาหวาน (บันทึกลงเครื่องถาวรอัตโนมัติ)</p>
+                    <p className="text-sm text-slate-500">ข้อมูลสถิติคำนวณแบบสดจากทะเบียนผู้ป่วยเบาหวาน (เก็บบันทึกถาวร)</p>
                   </div>
                   
                   <div className="flex flex-wrap gap-2">
@@ -1156,7 +1178,7 @@
                       <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                         <Icon name="user-plus" className="text-teal-600" size={20}/> ลงทะเบียนผู้ป่วยเบาหวานรายใหม่
                       </h3>
-                      <p className="text-xs text-slate-400 mt-0.5">ระบุข้อมูลการตรวจร่างกาย ผล HbA1c ตั้งต้น และติ๊กเลือกรายการยาเบาหวาน (เซฟลงเครื่องถาวร)</p>
+                      <p className="text-xs text-slate-400 mt-0.5">ระบุข้อมูลการตรวจร่างกาย ผล HbA1c ตั้งต้น และติ๊กเลือกรายการยาเบาหวาน</p>
                     </div>
                   </div>
 
@@ -1315,7 +1337,7 @@
               </div>
             )}
 
-            {}
+            {/* TAB 2: FOLLOW-UP VISITS */}
             {activeTab === 'followup' && (
               <div className="space-y-8 animate-fadeIn">
                 <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1482,29 +1504,6 @@
                             />
                           </div>
                         </div>
-
-                        <div className="pt-2 border-t border-slate-200/80">
-                          <span className="text-[11px] font-extrabold text-slate-600 block mb-2">6. จำแนกตามส่วนต่างๆ ของร่างกาย (Segmental Body Comp):</span>
-                          <div className="grid grid-cols-3 gap-3">
-                            <div className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-2">
-                              <span className="text-[10px] font-black text-teal-800 block">ส่วนแขน (Arms)</span>
-                              <input type="number" step="0.1" name="armSFat" value={visitFormData.armSFat} onChange={handleVisitInputChange} placeholder="% S-Fat แขน" className="w-full px-2 py-1 text-[11px] border rounded" />
-                              <input type="number" step="0.1" name="armMuscle" value={visitFormData.armMuscle} onChange={handleVisitInputChange} placeholder="% กล้ามเนื้อ แขน" className="w-full px-2 py-1 text-[11px] border rounded" />
-                            </div>
-
-                            <div className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-2">
-                              <span className="text-[10px] font-black text-teal-800 block">ส่วนลำตัว (Trunk)</span>
-                              <input type="number" step="0.1" name="trunkSFat" value={visitFormData.trunkSFat} onChange={handleVisitInputChange} placeholder="% S-Fat ลำตัว" className="w-full px-2 py-1 text-[11px] border rounded" />
-                              <input type="number" step="0.1" name="trunkMuscle" value={visitFormData.trunkMuscle} onChange={handleVisitInputChange} placeholder="% กล้ามเนื้อ ลำตัว" className="w-full px-2 py-1 text-[11px] border rounded" />
-                            </div>
-
-                            <div className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-2">
-                              <span className="text-[10px] font-black text-teal-800 block">ส่วนขา (Legs)</span>
-                              <input type="number" step="0.1" name="legSFat" value={visitFormData.legSFat} onChange={handleVisitInputChange} placeholder="% S-Fat ขา" className="w-full px-2 py-1 text-[11px] border rounded" />
-                              <input type="number" step="0.1" name="legMuscle" value={visitFormData.legMuscle} onChange={handleVisitInputChange} placeholder="% กล้ามเนื้อ ขา" className="w-full px-2 py-1 text-[11px] border rounded" />
-                            </div>
-                          </div>
-                        </div>
                       </div>
 
                       {renderMedicationChecklist(visitMeds, setVisitMeds)}
@@ -1566,7 +1565,7 @@
               </div>
             )}
 
-            {}
+            {/* TAB 3: PATIENT DIRECTORY */}
             {activeTab === 'directory' && (
               <div className="space-y-6 animate-fadeIn">
                 <div className="flex justify-between items-center">
@@ -1643,7 +1642,7 @@
 
           </main>
 
-          {}
+          {/* Delete Patient Confirmation Modal */}
           {patientToDelete && (
             <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-4 text-center">
@@ -1673,7 +1672,60 @@
             </div>
           )}
 
-          {}
+          {/* Supabase Connection Setup Modal */}
+          {isSupabaseModalOpen && (
+            <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5">
+                <div className="flex justify-between items-center border-b pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-teal-100 text-teal-800 rounded-xl"><Icon name="database" size={20}/></div>
+                    <div>
+                      <h3 className="font-extrabold text-slate-800 text-base">ตั้งค่าเชื่อมต่อ Supabase Cloud Database</h3>
+                      <p className="text-xs text-slate-400">วาง Project URL และ API Key เพื่อซิงค์ข้อมูลระหว่างเครื่อง</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setIsSupabaseModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg font-bold p-1 cursor-pointer">✕</button>
+                </div>
+
+                <div className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">1. Supabase Project URL</label>
+                    <input 
+                      type="text" 
+                      value={supabaseUrl} 
+                      onChange={(e) => setSupabaseUrl(e.target.value)} 
+                      placeholder="https://xxxxxxxx.supabase.co"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-teal-500/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">2. Supabase Anon / Public Key</label>
+                    <textarea 
+                      value={supabaseKey} 
+                      onChange={(e) => setSupabaseKey(e.target.value)} 
+                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      rows="3"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-teal-500/20"
+                    ></textarea>
+                  </div>
+
+                  <div className="p-3 bg-teal-50 text-teal-900 rounded-2xl border border-teal-100 leading-relaxed text-[11px]">
+                    💡 <b>คำแนะนำ:</b> หากยังไม่เคยตั้งค่า Supabase สามารถใช้งานในโหมด LocalStorage ต่อได้ทันที ข้อมูลจะไม่สูญหายเมื่อเปิดใช้งานบนเครื่องเดิมครับ
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex gap-2">
+                  <button onClick={() => setIsSupabaseModalOpen(false)} className="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition cursor-pointer">ปิด</button>
+                  <button onClick={() => saveSupabaseCredentials(supabaseUrl, supabaseKey)} className="w-2/3 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <Icon name="check" size={16}/> บันทึกการเชื่อมต่อ Cloud
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* User Management Modal */}
           {isUserMgmtOpen && (
             <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5 max-h-[90vh] overflow-y-auto">
@@ -1776,7 +1828,7 @@
             </div>
           )}
 
-          {}
+          {/* Export CSV Modal */}
           {isExportModalOpen && (
             <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5">
