@@ -35,10 +35,10 @@
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
 
   <div id="root">
-    <div className="min-h-screen flex flex-col justify-center items-center bg-slate-900 text-white p-6 text-center">
-      <div className="w-12 h-12 border-4 border-teal-400 border-t-transparent rounded-full animate-spin mb-4"></div>
-      <h2 className="text-lg font-bold">กำลังโหลดระบบ DM Remission Clinic PCU2 ศรีพิมาน...</h2>
-      <p className="text-xs text-slate-400 mt-2">กำลังเชื่อมต่อฐานข้อมูลและประวัติผู้ป่วย</p>
+    <div class="min-h-screen flex flex-col justify-center items-center bg-slate-900 text-white p-6 text-center">
+      <div class="w-12 h-12 border-4 border-teal-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+      <h2 class="text-lg font-bold">กำลังโหลดระบบ DM Remission Clinic PCU2 ศรีพิมาน...</h2>
+      <p class="text-xs text-slate-400 mt-2">กำลังเชื่อมต่อฐานข้อมูลและประวัติผู้ป่วย</p>
     </div>
   </div>
 
@@ -59,9 +59,9 @@
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
 
-    // 🔑 ฝังรหัสเชื่อมต่อ Supabase ของคุณหมอตรงนี้ (เพื่อให้ทุกเครื่องเชื่อมต่อให้อัตโนมัติทันที)
-    const HARDCODED_SUPABASE_URL = "https://xxxxxxxx.supabase.co"; // <--- วาง Supabase Project URL ของคุณหมอที่นี่
-    const HARDCODED_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // <--- วาง Anon Key ของคุณหมอที่นี่
+    // 🔑 ฝังรหัสเชื่อมต่อ Supabase ของคุณหมอตรงนี้ (ใส่ภายหลังได้ หรือกดตั้งค่าผ่านหน้าเว็บ)
+    const HARDCODED_SUPABASE_URL = ""; 
+    const HARDCODED_SUPABASE_KEY = ""; 
 
     const Icon = ({ name, size = 18, className = "" }) => {
       const props = {
@@ -174,18 +174,12 @@
     ];
 
     function App() {
-      // Supabase credentials state (ดึงจาก HARDCODED ก่อน หากไม่มีค่อยดึงจาก LocalStorage)
+      // Supabase credentials state
       const [supabaseUrl, setSupabaseUrl] = useState(() => HARDCODED_SUPABASE_URL || localStorage.getItem('DM_SUPABASE_URL') || '');
       const [supabaseKey, setSupabaseKey] = useState(() => HARDCODED_SUPABASE_KEY || localStorage.getItem('DM_SUPABASE_KEY') || '');
       const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
       const [supabaseStatus, setSupabaseStatus] = useState('local');
 
-      const [supabaseUrl, setSupabaseUrl] = useState(() => localStorage.getItem('DM_SUPABASE_URL') || '');
-      const [supabaseKey, setSupabaseKey] = useState(() => localStorage.getItem('DM_SUPABASE_KEY') || '');
-      const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
-      const [supabaseStatus, setSupabaseStatus] = useState('local'); // 'local', 'connected', 'error'
-
-      // Supabase Client Instance Reference
       const [supabaseClient, setSupabaseClient] = useState(null);
 
       const [users, setUsers] = useState(() => {
@@ -202,7 +196,7 @@
         } catch(e) { return initialPatients; }
       });
 
-      const [currentUser, setCurrentUser] = useState(null); // Requires login on startup
+      const [currentUser, setCurrentUser] = useState(null);
       const [authMode, setAuthMode] = useState('login');
       
       const [regName, setRegName] = useState('');
@@ -265,13 +259,12 @@
       }, [users]);
 
       useEffect(() => {
-        if (supabaseUrl && supabaseKey && window.supabase) {
+        if (supabaseUrl && supabaseKey && window.supabase && supabaseUrl.startsWith('http')) {
           try {
             const client = window.supabase.createClient(supabaseUrl, supabaseKey);
             setSupabaseClient(client);
             setSupabaseStatus('connected');
 
-            // Fetch patients from Supabase
             client.from('patients').select('*').then(({ data, error }) => {
               if (error) {
                 console.error("Supabase fetch patients error:", error);
@@ -281,7 +274,6 @@
               }
             });
 
-            // Fetch users from Supabase
             client.from('users').select('*').then(({ data, error }) => {
               if (error) console.error("Supabase fetch users error:", error);
               else if (data && data.length > 0) {
@@ -808,10 +800,10 @@
                     if (6.5 >= min && 6.5 <= max) {
                       const yThreshold = padding + chartHeight - ((6.5 - min) / range) * chartHeight;
                       return (
-                        <>
+                        <g>
                           <line x1={padding} y1={yThreshold} x2={width - padding} y2={yThreshold} stroke="#10b981" strokeWidth="1.5" strokeDasharray="4 4" />
                           <text x={width - padding - 170} y={yThreshold - 5} fill="#047857" fontSize="9" fontWeight="bold">เป้าหมายเบาหวานสงบ Remission (&lt; 6.5%)</text>
-                        </>
+                        </g>
                       );
                     }
                   })()}
@@ -1405,7 +1397,10 @@
 
                     {/* Body Composition Analytics & Comparison Panel */}
                     {(() => {
-                      const bodyCompVisits = selectedPatient.visits.filter(v => v.fatPercentage !== undefined && v.fatPercentage !== null && v.fatPercentage !== '' && !isNaN(v.fatPercentage));
+                      const bodyCompVisits = selectedPatient.visits.filter(v => 
+                        (v.fatPercentage !== undefined && v.fatPercentage !== null && v.fatPercentage !== '' && !isNaN(v.fatPercentage)) ||
+                        (v.armSFat !== undefined && v.armSFat !== null && v.armSFat !== '' && !isNaN(v.armSFat))
+                      );
                       if (bodyCompVisits.length === 0) return null;
 
                       const firstBC = bodyCompVisits[0];
@@ -1442,21 +1437,21 @@
                               <button
                                 type="button"
                                 onClick={() => setBodyCompMode('comparison')}
-                                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg transition ${bodyCompMode === 'comparison' ? 'bg-white text-teal-800 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'}`}
+                                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg transition ${bodyCompMode === 'comparison' ? 'bg-white text-teal-800 shadow-sm font-black' : 'text-slate-600 hover:text-slate-900'}`}
                               >
                                 📊 เปรียบเทียบ ครั้งแรก vs ล่าสุด
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setBodyCompMode('history')}
-                                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg transition ${bodyCompMode === 'history' ? 'bg-white text-teal-800 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'}`}
+                                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg transition ${bodyCompMode === 'history' ? 'bg-white text-teal-800 shadow-sm font-black' : 'text-slate-600 hover:text-slate-900'}`}
                               >
                                 📋 ประวัติทุกครั้ง ({bodyCompVisits.length})
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setBodyCompMode('charts')}
-                                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg transition ${bodyCompMode === 'charts' ? 'bg-white text-teal-800 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'}`}
+                                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg transition ${bodyCompMode === 'charts' ? 'bg-white text-teal-800 shadow-sm font-black' : 'text-slate-600 hover:text-slate-900'}`}
                               >
                                 📈 กราฟแนวโน้ม
                               </button>
@@ -1476,35 +1471,86 @@
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-100 font-medium">
+                                    <tr className="bg-slate-50/40">
+                                      <td colSpan="4" className="p-2 font-black text-teal-800 text-[11px] uppercase tracking-wider">📌 1. ค่ารวมภาพรวมร่างกาย (Overall)</td>
+                                    </tr>
                                     <tr>
-                                      <td className="p-2.5 font-bold text-slate-700">1. % ไขมันรวม Fat</td>
+                                      <td className="p-2.5 font-bold text-slate-700 pl-6">1.1 % ไขมันรวม Fat</td>
                                       <td className="p-2.5 text-center bg-amber-50/20">{firstBC.fatPercentage ?? '-'} %</td>
                                       <td className="p-2.5 text-center font-bold text-teal-900 bg-teal-50/20">{latestBC.fatPercentage ?? '-'} %</td>
                                       <td className="p-2.5 text-center">{hasMultipleVisits ? renderDiff(latestBC.fatPercentage, firstBC.fatPercentage, true) : '-'}</td>
                                     </tr>
                                     <tr>
-                                      <td className="p-2.5 font-bold text-slate-700">2. % ไขมันใต้ผิวหนัง S-Fat</td>
+                                      <td className="p-2.5 font-bold text-slate-700 pl-6">1.2 % ไขมันใต้ผิวหนัง S-Fat รวม</td>
                                       <td className="p-2.5 text-center bg-amber-50/20">{firstBC.sFatPercentage ?? '-'} %</td>
                                       <td className="p-2.5 text-center font-bold text-teal-900 bg-teal-50/20">{latestBC.sFatPercentage ?? '-'} %</td>
                                       <td className="p-2.5 text-center">{hasMultipleVisits ? renderDiff(latestBC.sFatPercentage, firstBC.sFatPercentage, true) : '-'}</td>
                                     </tr>
                                     <tr className="bg-emerald-50/20">
-                                      <td className="p-2.5 font-extrabold text-emerald-800">3. % กล้ามเนื้อ Muscle</td>
+                                      <td className="p-2.5 font-extrabold text-emerald-800 pl-6">1.3 % กล้ามเนื้อ Muscle รวม</td>
                                       <td className="p-2.5 text-center bg-amber-50/20">{firstBC.musclePercentage ?? '-'} %</td>
                                       <td className="p-2.5 text-center font-bold text-emerald-900 bg-teal-50/20">{latestBC.musclePercentage ?? '-'} %</td>
                                       <td className="p-2.5 text-center">{hasMultipleVisits ? renderDiff(latestBC.musclePercentage, firstBC.musclePercentage, false) : '-'}</td>
                                     </tr>
                                     <tr>
-                                      <td className="p-2.5 font-bold text-rose-800">4. ระดับไขมันช่องท้อง Visceral Fat</td>
+                                      <td className="p-2.5 font-bold text-rose-800 pl-6">1.4 ระดับไขมันช่องท้อง Visceral Fat</td>
                                       <td className="p-2.5 text-center bg-amber-50/20">{firstBC.visceralFat ?? '-'}</td>
                                       <td className="p-2.5 text-center font-bold text-rose-900 bg-teal-50/20">{latestBC.visceralFat ?? '-'}</td>
                                       <td className="p-2.5 text-center">{hasMultipleVisits ? renderDiff(latestBC.visceralFat, firstBC.visceralFat, true) : '-'}</td>
                                     </tr>
                                     <tr>
-                                      <td className="p-2.5 font-bold text-slate-700">5. อัตราการเผาผลาญขณะพัก RM</td>
+                                      <td className="p-2.5 font-bold text-slate-700 pl-6">1.5 อัตราการเผาผลาญขณะพัก RM</td>
                                       <td className="p-2.5 text-center bg-amber-50/20">{firstBC.restingMetabolism ?? '-'} kcal</td>
                                       <td className="p-2.5 text-center font-bold text-teal-900 bg-teal-50/20">{latestBC.restingMetabolism ?? '-'} kcal</td>
                                       <td className="p-2.5 text-center">{hasMultipleVisits ? renderDiff(latestBC.restingMetabolism, firstBC.restingMetabolism, false) : '-'}</td>
+                                    </tr>
+
+                                    <tr className="bg-slate-50/40">
+                                      <td colSpan="4" className="p-2 font-black text-cyan-800 text-[11px] uppercase tracking-wider">🦾 2. จำแนกส่วนแขน (Arm)</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="p-2.5 font-semibold text-slate-700 pl-6">- % ไขมันใต้ผิวหนัง S-Fat แขน</td>
+                                      <td className="p-2.5 text-center bg-amber-50/20">{firstBC.armSFat ?? '-'} %</td>
+                                      <td className="p-2.5 text-center font-bold text-teal-900 bg-teal-50/20">{latestBC.armSFat ?? '-'} %</td>
+                                      <td className="p-2.5 text-center">{hasMultipleVisits ? renderDiff(latestBC.armSFat, firstBC.armSFat, true) : '-'}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="p-2.5 font-semibold text-emerald-800 pl-6">- % กล้ามเนื้อ Muscle แขน</td>
+                                      <td className="p-2.5 text-center bg-amber-50/20">{firstBC.armMuscle ?? '-'} %</td>
+                                      <td className="p-2.5 text-center font-bold text-emerald-900 bg-teal-50/20">{latestBC.armMuscle ?? '-'} %</td>
+                                      <td className="p-2.5 text-center">{hasMultipleVisits ? renderDiff(latestBC.armMuscle, firstBC.armMuscle, false) : '-'}</td>
+                                    </tr>
+
+                                    <tr className="bg-slate-50/40">
+                                      <td colSpan="4" className="p-2 font-black text-purple-800 text-[11px] uppercase tracking-wider">🎽 3. จำแนกส่วนลำตัว (Trunk)</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="p-2.5 font-semibold text-slate-700 pl-6">- % ไขมันใต้ผิวหนัง S-Fat ลำตัว</td>
+                                      <td className="p-2.5 text-center bg-amber-50/20">{firstBC.trunkSFat ?? '-'} %</td>
+                                      <td className="p-2.5 text-center font-bold text-teal-900 bg-teal-50/20">{latestBC.trunkSFat ?? '-'} %</td>
+                                      <td className="p-2.5 text-center">{hasMultipleVisits ? renderDiff(latestBC.trunkSFat, firstBC.trunkSFat, true) : '-'}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="p-2.5 font-semibold text-emerald-800 pl-6">- % กล้ามเนื้อ Muscle ลำตัว</td>
+                                      <td className="p-2.5 text-center bg-amber-50/20">{firstBC.trunkMuscle ?? '-'} %</td>
+                                      <td className="p-2.5 text-center font-bold text-emerald-900 bg-teal-50/20">{latestBC.trunkMuscle ?? '-'} %</td>
+                                      <td className="p-2.5 text-center">{hasMultipleVisits ? renderDiff(latestBC.trunkMuscle, firstBC.trunkMuscle, false) : '-'}</td>
+                                    </tr>
+
+                                    <tr className="bg-slate-50/40">
+                                      <td colSpan="4" className="p-2 font-black text-amber-800 text-[11px] uppercase tracking-wider">🦵 4. จำแนกส่วนขา (Leg)</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="p-2.5 font-semibold text-slate-700 pl-6">- % ไขมันใต้ผิวหนัง S-Fat ขา</td>
+                                      <td className="p-2.5 text-center bg-amber-50/20">{firstBC.legSFat ?? '-'} %</td>
+                                      <td className="p-2.5 text-center font-bold text-teal-900 bg-teal-50/20">{latestBC.legSFat ?? '-'} %</td>
+                                      <td className="p-2.5 text-center">{hasMultipleVisits ? renderDiff(latestBC.legSFat, firstBC.legSFat, true) : '-'}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="p-2.5 font-semibold text-emerald-800 pl-6">- % กล้ามเนื้อ Muscle ขา</td>
+                                      <td className="p-2.5 text-center bg-amber-50/20">{firstBC.legMuscle ?? '-'} %</td>
+                                      <td className="p-2.5 text-center font-bold text-emerald-900 bg-teal-50/20">{latestBC.legMuscle ?? '-'} %</td>
+                                      <td className="p-2.5 text-center">{hasMultipleVisits ? renderDiff(latestBC.legMuscle, firstBC.legMuscle, false) : '-'}</td>
                                     </tr>
                                   </tbody>
                                 </table>
@@ -1518,11 +1564,14 @@
                                 <thead>
                                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-extrabold">
                                     <th className="p-2.5">วันที่มาคลินิก</th>
-                                    <th className="p-2.5 text-center">% ไขมัน Fat</th>
+                                    <th className="p-2.5 text-center">% Fat</th>
                                     <th className="p-2.5 text-center">% S-Fat</th>
                                     <th className="p-2.5 text-center">% กล้ามเนื้อ</th>
-                                    <th className="p-2.5 text-center">ไขมันช่องท้อง</th>
+                                    <th className="p-2.5 text-center">Visceral Fat</th>
                                     <th className="p-2.5 text-center">RM (kcal)</th>
+                                    <th className="p-2.5 text-center">แขน (S-Fat/Mus)</th>
+                                    <th className="p-2.5 text-center">ลำตัว (S-Fat/Mus)</th>
+                                    <th className="p-2.5 text-center">ขา (S-Fat/Mus)</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -1534,6 +1583,9 @@
                                       <td className="p-2.5 text-center text-emerald-700 font-bold">{v.musclePercentage ?? '-'}%</td>
                                       <td className="p-2.5 text-center text-rose-700 font-bold">{v.visceralFat ?? '-'}</td>
                                       <td className="p-2.5 text-center">{v.restingMetabolism ?? '-'}</td>
+                                      <td className="p-2.5 text-center text-[11px]">{v.armSFat ?? '-'}% / {v.armMuscle ?? '-'}%</td>
+                                      <td className="p-2.5 text-center text-[11px]">{v.trunkSFat ?? '-'}% / {v.trunkMuscle ?? '-'}%</td>
+                                      <td className="p-2.5 text-center text-[11px]">{v.legSFat ?? '-'}% / {v.legMuscle ?? '-'}%</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -1616,51 +1668,124 @@
                         </div>
                       </div>
 
-                      {/* Body Composition Form Fields */}
-                      <div className="space-y-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-200">
+                      {/* Body Composition Detailed Form Fields */}
+                      <div className="space-y-4 bg-slate-50/90 p-4 rounded-2xl border border-slate-200">
                         <label className="block text-xs font-extrabold text-teal-800 uppercase tracking-wider flex items-center gap-1.5">
                           🧬 องค์ประกอบร่างกาย (Body Composition)
                         </label>
                         
-                        <div className="grid grid-cols-3 gap-3">
-                          <div>
-                            <label className="block text-[10px] font-extrabold text-slate-500 mb-1">1. % ไขมันรวม Fat</label>
-                            <input 
-                              type="number" step="0.1" name="fatPercentage" value={visitFormData.fatPercentage} onChange={handleVisitInputChange}
-                              placeholder="เช่น 28.5" className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
-                            />
+                        {/* Section 1: Main Overall Values */}
+                        <div className="space-y-2">
+                          <span className="text-[11px] font-bold text-slate-600 block">📌 1. ค่ารวมภาพรวมร่างกาย:</span>
+                          <div className="grid grid-cols-3 gap-2.5">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">1. % ไขมันรวม Fat</label>
+                              <input 
+                                type="number" step="0.1" name="fatPercentage" value={visitFormData.fatPercentage} onChange={handleVisitInputChange}
+                                placeholder="เช่น 28.5" className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">2. % S-Fat ใต้ผิวหนังรวม</label>
+                              <input 
+                                type="number" step="0.1" name="sFatPercentage" value={visitFormData.sFatPercentage} onChange={handleVisitInputChange}
+                                placeholder="เช่น 24.0" className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">3. % กล้ามเนื้อ Muscle รวม</label>
+                              <input 
+                                type="number" step="0.1" name="musclePercentage" value={visitFormData.musclePercentage} onChange={handleVisitInputChange}
+                                placeholder="เช่น 31.0" className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] font-extrabold text-slate-500 mb-1">2. % ไขมันใต้ผิวหนัง S-Fat</label>
-                            <input 
-                              type="number" step="0.1" name="sFatPercentage" value={visitFormData.sFatPercentage} onChange={handleVisitInputChange}
-                              placeholder="เช่น 24.0" className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-extrabold text-slate-500 mb-1">3. % กล้ามเนื้อ Muscle</label>
-                            <input 
-                              type="number" step="0.1" name="musclePercentage" value={visitFormData.musclePercentage} onChange={handleVisitInputChange}
-                              placeholder="เช่น 31.0" className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
-                            />
+
+                          <div className="grid grid-cols-2 gap-2.5 pt-1">
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">4. ระดับไขมันช่องท้อง Visceral Fat</label>
+                              <input 
+                                type="number" name="visceralFat" value={visitFormData.visceralFat} onChange={handleVisitInputChange}
+                                placeholder="เช่น 8" className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-1">5. อัตราเผาผลาญขณะพัก RM (kcal)</label>
+                              <input 
+                                type="number" name="restingMetabolism" value={visitFormData.restingMetabolism} onChange={handleVisitInputChange}
+                                placeholder="เช่น 1520" className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
+                              />
+                            </div>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[10px] font-extrabold text-slate-500 mb-1">4. ไขมันช่องท้อง Visceral Fat</label>
-                            <input 
-                              type="number" name="visceralFat" value={visitFormData.visceralFat} onChange={handleVisitInputChange}
-                              placeholder="เช่น 8" className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
-                            />
+                        {/* Section 2: Segmental Values */}
+                        <div className="pt-2 border-t border-slate-200 space-y-3">
+                          <span className="text-[11px] font-bold text-teal-800 block">📌 6. จำแนกตามส่วนต่างๆ ของร่างกาย:</span>
+                          
+                          {/* Arm */}
+                          <div className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-1.5">
+                            <span className="text-[10px] font-extrabold text-cyan-800 uppercase block">🦾 ส่วนแขน (Arm)</span>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-[9px] font-bold text-slate-500 mb-0.5">% ไขมันใต้ผิวหนัง S-Fat แขน</label>
+                                <input 
+                                  type="number" step="0.1" name="armSFat" value={visitFormData.armSFat} onChange={handleVisitInputChange}
+                                  placeholder="เช่น 24.5" className="w-full px-2 py-1 rounded-lg border border-slate-200 text-xs bg-slate-50"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-bold text-slate-500 mb-0.5">% กล้ามเนื้อ Muscle แขน</label>
+                                <input 
+                                  type="number" step="0.1" name="armMuscle" value={visitFormData.armMuscle} onChange={handleVisitInputChange}
+                                  placeholder="เช่น 29.0" className="w-full px-2 py-1 rounded-lg border border-slate-200 text-xs bg-slate-50"
+                                />
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] font-extrabold text-slate-500 mb-1">5. อัตราการเผาผลาญขณะพัก RM (kcal)</label>
-                            <input 
-                              type="number" name="restingMetabolism" value={visitFormData.restingMetabolism} onChange={handleVisitInputChange}
-                              placeholder="เช่น 1520" className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
-                            />
+
+                          {/* Trunk */}
+                          <div className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-1.5">
+                            <span className="text-[10px] font-extrabold text-purple-800 uppercase block">🎽 ส่วนลำตัว (Trunk)</span>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-[9px] font-bold text-slate-500 mb-0.5">% ไขมันใต้ผิวหนัง S-Fat ลำตัว</label>
+                                <input 
+                                  type="number" step="0.1" name="trunkSFat" value={visitFormData.trunkSFat} onChange={handleVisitInputChange}
+                                  placeholder="เช่น 25.0" className="w-full px-2 py-1 rounded-lg border border-slate-200 text-xs bg-slate-50"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-bold text-slate-500 mb-0.5">% กล้ามเนื้อ Muscle ลำตัว</label>
+                                <input 
+                                  type="number" step="0.1" name="trunkMuscle" value={visitFormData.trunkMuscle} onChange={handleVisitInputChange}
+                                  placeholder="เช่น 31.0" className="w-full px-2 py-1 rounded-lg border border-slate-200 text-xs bg-slate-50"
+                                />
+                              </div>
+                            </div>
                           </div>
+
+                          {/* Leg */}
+                          <div className="bg-white p-2.5 rounded-xl border border-slate-200 space-y-1.5">
+                            <span className="text-[10px] font-extrabold text-amber-800 uppercase block">🦵 ส่วนขา (Leg)</span>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-[9px] font-bold text-slate-500 mb-0.5">% ไขมันใต้ผิวหนัง S-Fat ขา</label>
+                                <input 
+                                  type="number" step="0.1" name="legSFat" value={visitFormData.legSFat} onChange={handleVisitInputChange}
+                                  placeholder="เช่น 22.0" className="w-full px-2 py-1 rounded-lg border border-slate-200 text-xs bg-slate-50"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-bold text-slate-500 mb-0.5">% กล้ามเนื้อ Muscle ขา</label>
+                                <input 
+                                  type="number" step="0.1" name="legMuscle" value={visitFormData.legMuscle} onChange={handleVisitInputChange}
+                                  placeholder="เช่น 33.0" className="w-full px-2 py-1 rounded-lg border border-slate-200 text-xs bg-slate-50"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
                         </div>
                       </div>
 
