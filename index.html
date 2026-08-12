@@ -1489,16 +1489,7 @@ const getHbA1cChartData = (patient, visits = []) => {
 
                 {selectedPatient && (
                   <div className="space-y-6">
-                    {renderSVGChart(
-  getHbA1cChartData(selectedPatient, patientVisits),
-  'hba1c',
-  '#2563eb',
-  '📊 พัฒนาการระดับ HbA1c (%)',
-  4,
-  14,
-  '%',
-  true
-)}
+                    {renderSVGChart(getHbA1cChartData(selectedPatient, patientVisits),'hba1c', '#2563eb','📊 พัฒนาการระดับ HbA1c (%)', 4, 14, '%',true)}
                     {renderSVGChart(selectedPatient.visits, 'weight', '#10b981', 'แนวโน้มการเปลี่ยนแปลงน้ำหนักตัว (kg)', 40.0, 110.0, 'kg')}
                     {renderSVGChart(selectedPatient.visits, 'smbg', '#f59e0b', 'ค่าเฉลี่ยตรวจน้ำตาลปลายนิ้วรายวัน SMBG (mg/dL)', 70, 220, 'mg/dL')}
 
