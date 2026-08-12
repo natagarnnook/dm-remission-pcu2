@@ -5,17 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DM remission clinic PCU2 ศรีพิมาน อ.เมือง จ.สตูล</title>
   
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- React 18 & ReactDOM CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
   
-  <!-- Babel Standalone CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js" crossorigin="anonymous"></script>
 
-  <!-- Supabase JS Client CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -59,7 +55,7 @@
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
 
-    // 🔑 ฝังรหัสเชื่อมต่อ Supabase ของคุณหมอตรงนี้ (ใส่ภายหลังได้ หรือกดตั้งค่าผ่านหน้าเว็บ)
+    // 🔑 ฝังรหัสเชื่อมต่อ Supabase ของคุณหมอตรงนี้
     const HARDCODED_SUPABASE_URL = "https://ayrxuealjhdncbivhdlz.supabase.co"; 
     const HARDCODED_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cnh1ZWFsamhkbmNiaXZoZGx6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNDU3NTEsImV4cCI6MjEwMDcyMTc1MX0.tsa-y3L7Q_PWpwvfkBlcKZtJn1g76jZI_z94sNpZGoY"; 
 
@@ -565,9 +561,9 @@
         const regWeight = parseFloat(formData.weight) || 0;
         const regHeight = parseFloat(formData.height) || 0;
         const regBmi = regWeight && regHeight ? parseFloat((regWeight / ((regHeight / 100) * (regHeight / 100))).toFixed(1)) : 0;
-        const regHba1c = formData.hba1c ? parseFloat(formData.hba1c) : null;
+        const regHba1c = formData.hba1c_init ? parseFloat(formData.hba1c_init) : null;
         const newId = `DM-${String(patients.length + 1).padStart(3, '0')}`;
-        const regDateToday = new Date().toISOString().split('T')[0];
+        const regDateToday = formData.registered_date || new Date().toISOString().split('T')[0];
 
         let stopDateToRecord = "";
         if (formData.status === 'stopped' || formData.status === 'remission') {
@@ -588,6 +584,7 @@
           height: regHeight,
           bmi: regBmi,
           hba1c: regHba1c,
+          hba1c_init_date: formData.hba1c_init_date,
           status: formData.status,
           hasGlucometer: formData.hasGlucometer,
           regDate: regDateToday,
@@ -607,7 +604,7 @@
         syncPatientToSupabase(newPatient);
 
         setSelectedPatientId(newId);
-        setFormData({ firstName: '', lastName: '', age: '', diagnosedYear: '', comorbidities: '', weight: '', height: '', hba1c: '', status: 'same', hasGlucometer: false, stoppedDate: '' });
+        setFormData({ firstName: '', lastName: '', age: '', diagnosedYear: '', comorbidities: '', weight: '', height: '', hba1c_init: '', hba1c_init_date: '', registered_date: new Date().toISOString().split('T')[0], status: 'same', hasGlucometer: false, stoppedDate: '' });
         setRegMeds(defaultMedList);
         setInfoMessage("ลงทะเบียนคนไข้รายใหม่เข้าคลินิก DM Remission สำเร็จแล้ว");
         setTimeout(() => setInfoMessage(null), 5000);
@@ -752,235 +749,173 @@
           </div>
         );
       };
-// ฟังก์ชันรวบรวมและจัดเรียงจุดข้อมูล HbA1c ส่งเข้า renderSVGChart
-const getHbA1cChartData = (patient, visits = []) => {
-  if (!patient) return [];
-  const chartPoints = [];
 
-  // 1. จุดแรกรับ (ดึง hba1c_init_date วันที่เจาะจริงย้อนหลัง)
-  const initHbA1c = patient.hba1c_init || patient.hba1c;
-  if (initHbA1c && parseFloat(initHbA1c) > 0) {
-    chartPoints.push({
-      date: patient.hba1c_init_date || patient.registered_date || patient.created_at,
-      hba1c: parseFloat(initHbA1c),
-      label: 'แรกรับ'
-    });
-  }
+      // ฟังก์ชันรวบรวมและจัดเรียงจุดข้อมูล HbA1c ส่งเข้า renderSVGChart
+      const getHbA1cChartData = (patient, visits = []) => {
+        if (!patient) return [];
+        const chartPoints = [];
 
-  // 2. จุดจากการติดตามผล (Visits / Follow-up)
-  if (visits && visits.length > 0) {
-    visits.forEach(visit => {
-      const vHbA1c = visit.hba1c;
-      if (vHbA1c && parseFloat(vHbA1c) > 0) {
-        chartPoints.push({
-          date: visit.hba1c_date || visit.visit_date || visit.created_at,
-          hba1c: parseFloat(vHbA1c),
-          label: visit.notes || 'ติดตามผล'
-        });
-      }
-    });
-  }
+        // 1. จุดแรกรับ (ดึง hba1c_init_date วันที่เจาะจริงย้อนหลัง)
+        const initHbA1c = patient.hba1c_init || patient.hba1c;
+        if (initHbA1c && parseFloat(initHbA1c) > 0) {
+          chartPoints.push({
+            date: patient.hba1c_init_date || patient.registered_date || patient.created_at,
+            hba1c: parseFloat(initHbA1c),
+            label: 'แรกรับ'
+          });
+        }
 
-  // 3. จุดวันที่หยุดยา / ปรับลดยา
-  const stoppedDate = patient.stopped_date || patient.off_med_date;
-  const stoppedHbA1c = patient.stopped_hba1c || patient.off_med_hba1c;
-  if (stoppedDate && stoppedHbA1c) {
-    chartPoints.push({
-      date: stoppedDate,
-      hba1c: parseFloat(stoppedHbA1c),
-      label: '💊 หยุดยา'
-    });
-  }
+        // 2. จุดจากการติดตามผล (Visits / Follow-up)
+        if (visits && visits.length > 0) {
+          visits.forEach(visit => {
+            const vHbA1c = visit.hba1c;
+            if (vHbA1c && parseFloat(vHbA1c) > 0) {
+              chartPoints.push({
+                date: visit.hba1c_date || visit.visit_date || visit.created_at || visit.date,
+                hba1c: parseFloat(vHbA1c),
+                label: visit.notes || 'ติดตามผล'
+              });
+            }
+          });
+        }
 
-  // 4. จุดวันที่ Remission สำเร็จ
-  const remissionDate = patient.remission_date;
-  const remissionHbA1c = patient.remission_hba1c;
-  if (remissionDate && remissionHbA1c) {
-    chartPoints.push({
-      date: remissionDate,
-      hba1c: parseFloat(remissionHbA1c),
-      label: '🎉 Remission'
-    });
-  }
+        // 3. จุดวันที่หยุดยา / ปรับลดยา
+        const stoppedDate = patient.stopped_date || patient.off_med_date || patient.stoppedDate;
+        const stoppedHbA1c = patient.stopped_hba1c || patient.off_med_hba1c;
+        if (stoppedDate && stoppedHbA1c) {
+          chartPoints.push({
+            date: stoppedDate,
+            hba1c: parseFloat(stoppedHbA1c),
+            label: '💊 หยุดยา'
+          });
+        }
 
-  // 5. เรียงลำดับตามวันที่จากอดีต -> ปัจจุบัน
-  chartPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
+        // 4. จุดวันที่ Remission สำเร็จ
+        const remissionDate = patient.remission_date;
+        const remissionHbA1c = patient.remission_hba1c;
+        if (remissionDate && remissionHbA1c) {
+          chartPoints.push({
+            date: remissionDate,
+            hba1c: parseFloat(remissionHbA1c),
+            label: '🎉 Remission'
+          });
+        }
 
-  // 6. ขจัดข้อมูลวันที่ซ้ำกัน
-  const uniquePoints = [];
-  const seenDates = new Set();
+        // 5. เรียงลำดับตามวันที่จากอดีต -> ปัจจุบัน
+        chartPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  chartPoints.forEach(pt => {
-    const formattedDate = pt.date ? pt.date.split('T')[0] : '';
-    if (formattedDate && !seenDates.has(formattedDate)) {
-      seenDates.add(formattedDate);
-      uniquePoints.push(pt);
-    }
-  });
+        // 6. ขจัดข้อมูลวันที่ซ้ำกัน
+        const uniquePoints = [];
+        const seenDates = new Set();
 
-  return uniquePoints;
-};
-// 📊 ฟังก์ชันเตรียมข้อมูล HbA1c รวมทุกจุด (แรกรับ, Follow-up, หยุดยา, Remission)
-    const getHbA1cChartData = (patient, visits = []) => {
-      if (!patient) return [];
-      const chartPoints = [];
-
-      // 1. จุดแรกรับ (ดึง hba1c_init_date วันที่เจาะจริงย้อนหลัง)
-      const initHbA1c = patient.hba1c_init || patient.hba1c;
-      if (initHbA1c && parseFloat(initHbA1c) > 0) {
-        chartPoints.push({
-          date: patient.hba1c_init_date || patient.registered_date || patient.created_at,
-          hba1c: parseFloat(initHbA1c),
-          label: 'แรกรับ'
-        });
-      }
-
-      // 2. จุดติดตามผล (Visits)
-      if (visits && visits.length > 0) {
-        visits.forEach(visit => {
-          const vHbA1c = visit.hba1c;
-          if (vHbA1c && parseFloat(vHbA1c) > 0) {
-            chartPoints.push({
-              date: visit.hba1c_date || visit.visit_date || visit.created_at,
-              hba1c: parseFloat(vHbA1c),
-              label: visit.notes || 'ติดตามผล'
-            });
+        chartPoints.forEach(pt => {
+          const formattedDate = pt.date ? pt.date.split('T')[0] : '';
+          if (formattedDate && !seenDates.has(formattedDate)) {
+            seenDates.add(formattedDate);
+            uniquePoints.push(pt);
           }
         });
-      }
 
-      // 3. จุดวันที่หยุดยา / ปรับลดยา
-      const stoppedDate = patient.stopped_date || patient.off_med_date;
-      const stoppedHbA1c = patient.stopped_hba1c || patient.off_med_hba1c;
-      if (stoppedDate && stoppedHbA1c) {
-        chartPoints.push({
-          date: stoppedDate,
-          hba1c: parseFloat(stoppedHbA1c),
-          label: '💊 หยุดยา'
-        });
-      }
+        return uniquePoints;
+      };
 
-      // 4. จุดวันที่ Remission สำเร็จ
-      if (patient.remission_date && patient.remission_hba1c) {
-        chartPoints.push({
-          date: patient.remission_date,
-          hba1c: parseFloat(patient.remission_hba1c),
-          label: '🎉 Remission'
-        });
-      }
-
-      // เรียงลำดับตามวันที่จากอดีต -> ปัจจุบัน
-      chartPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-      // กรองเอาเฉพาะวันที่ไม่ซ้ำกัน
-      const uniquePoints = [];
-      const seenDates = new Set();
-      chartPoints.forEach(pt => {
-        const formattedDate = pt.date ? pt.date.split('T')[0] : '';
-        if (formattedDate && !seenDates.has(formattedDate)) {
-          seenDates.add(formattedDate);
-          uniquePoints.push(pt);
-        }
-      });
-
-      return uniquePoints;
-    };    
       const renderSVGChart = (data, dataKey, color, title, minVal, maxVal, unit, isHbA1cLimit = false) => {
-  if (!data || data.length === 0) {
-    return (
-      <div className="text-slate-400 text-xs py-8 text-center bg-slate-50 rounded-lg border border-slate-100">
-        ไม่มีข้อมูลเพียงพอสำหรับวาดกราฟ
-      </div>
-    );
-  }
+        if (!data || data.length === 0) {
+          return (
+            <div className="text-slate-400 text-xs py-8 text-center bg-slate-50 rounded-lg border border-slate-100">
+              ไม่มีข้อมูลเพียงพอสำหรับวาดกราฟ
+            </div>
+          );
+        }
 
-  const width = 800;
-  const height = 210; // ความสูงเผื่อวางวันที่บนแกน X
-  const padding = 40;
-  const chartWidth = width - padding * 2;
-  const chartHeight = height - padding * 2;
+        const width = 800;
+        const height = 210; // ความสูงเผื่อวางวันที่บนแกน X
+        const padding = 40;
+        const chartWidth = width - padding * 2;
+        const chartHeight = height - padding * 2;
 
-  const values = data.map(d => d[dataKey] || 0);
-  const min = minVal !== undefined ? minVal : Math.min(...values) * 0.95;
-  const max = maxVal !== undefined ? maxVal : Math.max(...values) * 1.05;
-  const range = max - min || 1;
+        const values = data.map(d => d[dataKey] || 0);
+        const min = minVal !== undefined ? minVal : Math.min(...values) * 0.95;
+        const max = maxVal !== undefined ? maxVal : Math.max(...values) * 1.05;
+        const range = max - min || 1;
 
-  // คำนวณพิกัด X, Y
-  const points = data.map((d, index) => {
-    const x = data.length === 1 
-      ? padding + chartWidth / 2 
-      : padding + (index / (data.length - 1)) * chartWidth;
-    const y = height - padding - (((d[dataKey] || 0) - min) / range) * chartHeight;
-    return { x, y, val: d[dataKey], date: d.date, label: d.label };
-  });
+        // คำนวณพิกัด X, Y
+        const points = data.map((d, index) => {
+          const x = data.length === 1 
+            ? padding + chartWidth / 2 
+            : padding + (index / (data.length - 1)) * chartWidth;
+          const y = height - padding - (((d[dataKey] || 0) - min) / range) * chartHeight;
+          return { x, y, val: d[dataKey], date: d.date, label: d.label };
+        });
 
-  // สร้างเส้นกราฟ
-  const pathD = points.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '');
+        // สร้างเส้นกราฟ
+        const pathD = points.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '');
 
-  // แปลงวันที่เป็น พ.ศ. ไทย (เช่น 15/01/2567)
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear() + 543;
-    return `${day}/${month}/${year}`;
-  };
+        // แปลงวันที่เป็น พ.ศ. ไทย (เช่น 15/01/2567)
+        const formatDate = (dateStr) => {
+          if (!dateStr) return '';
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return dateStr;
+          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const year = d.getFullYear() + 543;
+          return `${day}/${month}/${year}`;
+        };
 
-  return (
-    <div className="w-full overflow-x-auto bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
-      <div className="text-sm font-bold text-slate-700 mb-3 flex items-center justify-between">
-        <span>{title}</span>
-        <span className="text-xs font-normal text-slate-500">หน่วย: {unit}</span>
-      </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
-        {/* เส้นเกณฑ์ Remission 6.5% */}
-        {isHbA1cLimit && (
-          <g>
-            {(() => {
-              const limitY = height - padding - (((6.5) - min) / range) * chartHeight;
-              return (
-                <>
-                  <line x1={padding} y1={limitY} x2={width - padding} y2={limitY} stroke="#ef4444" strokeDasharray="4 4" strokeWidth="1.5" />
-                  <text x={width - padding + 5} y={limitY + 4} fill="#ef4444" fontSize="10" fontWeight="bold">เกณฑ์ 6.5%</text>
-                </>
-              );
-            })()}
-          </g>
-        )}
+        return (
+          <div className="w-full overflow-x-auto bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
+            <div className="text-sm font-bold text-slate-700 mb-3 flex items-center justify-between">
+              <span>{title}</span>
+              <span className="text-xs font-normal text-slate-500">หน่วย: {unit}</span>
+            </div>
+            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
+              {/* เส้นเกณฑ์ Remission 6.5% */}
+              {isHbA1cLimit && (
+                <g>
+                  {(() => {
+                    const limitY = height - padding - (((6.5) - min) / range) * chartHeight;
+                    return (
+                      <>
+                        <line x1={padding} y1={limitY} x2={width - padding} y2={limitY} stroke="#ef4444" strokeDasharray="4 4" strokeWidth="1.5" />
+                        <text x={width - padding + 5} y={limitY + 4} fill="#ef4444" fontSize="10" fontWeight="bold">เกณฑ์ 6.5%</text>
+                      </>
+                    );
+                  })()}
+                </g>
+              )}
 
-        {/* เส้นกราฟ */}
-        <path d={pathD} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              {/* เส้นกราฟ */}
+              <path d={pathD} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
 
-        {/* จุดพล็อต + ค่าตัวเลข + Label + วันที่แกน X */}
-        {points.map((p, i) => (
-          <g key={i}>
-            {/* จุดวงกลม */}
-            <circle cx={p.x} cy={p.y} r="6" fill={color} stroke="#ffffff" strokeWidth="2.5" />
-            
-            {/* ตัวเลขค่า HbA1c เหนือจุด */}
-            <text x={p.x} y={p.y - 12} textAnchor="middle" fill="#1e293b" fontSize="12" fontWeight="bold">
-              {p.val}
-            </text>
+              {/* จุดพล็อต + ค่าตัวเลข + Label + วันที่แกน X */}
+              {points.map((p, i) => (
+                <g key={i}>
+                  {/* จุดวงกลม */}
+                  <circle cx={p.x} cy={p.y} r="6" fill={color} stroke="#ffffff" strokeWidth="2.5" />
+                  
+                  {/* ตัวเลขค่า HbA1c เหนือจุด */}
+                  <text x={p.x} y={p.y - 12} textAnchor="middle" fill="#1e293b" fontSize="12" fontWeight="bold">
+                    {p.val}
+                  </text>
 
-            {/* ข้อความกำกับจุด เช่น 'หยุดยา' หรือ 'Remission' (ถ้ามี) */}
-            {p.label && (
-              <text x={p.x} y={p.y + 18} textAnchor="middle" fill="#2563eb" fontSize="9" fontWeight="bold">
-                {p.label}
-              </text>
-            )}
+                  {/* ข้อความกำกับจุด เช่น 'หยุดยา' หรือ 'Remission' (ถ้ามี) */}
+                  {p.label && (
+                    <text x={p.x} y={p.y + 18} textAnchor="middle" fill="#2563eb" fontSize="9" fontWeight="bold">
+                      {p.label}
+                    </text>
+                  )}
 
-            {/* 📅 วันที่เจาะ HbA1c ที่แกน X ด้านล่าง */}
-            <text x={p.x} y={height - 10} textAnchor="middle" fill="#64748b" fontSize="11" fontWeight="500">
-              {formatDate(p.date)}
-            </text>
-          </g>
-        ))}
-      </svg>
-    </div>
-  );
-};
+                  {/* 📅 วันที่เจาะ HbA1c ที่แกน X ด้านล่าง */}
+                  <text x={p.x} y={height - 10} textAnchor="middle" fill="#64748b" fontSize="11" fontWeight="500">
+                    {formatDate(p.date)}
+                  </text>
+                </g>
+              ))}
+            </svg>
+          </div>
+        );
+      };
+
       if (!currentUser) {
         return (
           <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
@@ -1318,47 +1253,48 @@ const getHbA1cChartData = (patient, visits = []) => {
                   </div>
 
                   <form onSubmit={handleRegisterSubmit} className="space-y-5">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
-  <div>
-    <label class="block text-xs font-semibold text-gray-700 mb-1">
-      📅 วันที่ลงทะเบียนเข้าคลินิก <span class="text-red-500">*</span>
-    </label>
-    <input 
-      type="date" 
-      value={formData.registered_date}
-      onChange={(e) => setFormData({...formData, registered_date: e.target.value})}
-      class="w-full p-2 border border-gray-300 rounded text-sm bg-white"
-      required
-    />
-  </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 bg-blue-50 p-3 rounded-xl border border-blue-100">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          📅 วันที่ลงทะเบียนเข้าคลินิก <span className="text-red-500">*</span>
+                        </label>
+                        <input 
+                          type="date" 
+                          value={formData.registered_date}
+                          onChange={(e) => setFormData({...formData, registered_date: e.target.value})}
+                          className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
+                          required
+                        />
+                      </div>
 
-  <div>
-    <label class="block text-xs font-semibold text-gray-700 mb-1">
-      🩸 วันที่เจาะ HbA1c แรกรับ
-    </label>
-    <input 
-      type="date" 
-      value={formData.hba1c_init_date}
-      onChange={(e) => setFormData({...formData, hba1c_init_date: e.target.value})}
-      class="w-full p-2 border border-gray-300 rounded text-sm bg-white"
-    />
-  </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          🩸 วันที่เจาะ HbA1c แรกรับ
+                        </label>
+                        <input 
+                          type="date" 
+                          value={formData.hba1c_init_date}
+                          onChange={(e) => setFormData({...formData, hba1c_init_date: e.target.value})}
+                          className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
+                        />
+                      </div>
 
-  <div>
-    <label class="block text-xs font-semibold text-gray-700 mb-1">
-      📊 ค่า HbA1c แรกรับ (%)
-    </label>
-    <input 
-      type="number" 
-      step="0.1"
-      placeholder="เช่น 8.5"
-      value={formData.hba1c_init}
-      onChange={(e) => setFormData({...formData, hba1c_init: e.target.value})}
-      class="w-full p-2 border border-gray-300 rounded text-sm bg-white"
-    />
-  </div>
-</div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          📊 ค่า HbA1c แรกรับ (%)
+                        </label>
+                        <input 
+                          type="number" 
+                          step="0.1"
+                          placeholder="เช่น 8.5"
+                          value={formData.hba1c_init}
+                          onChange={(e) => setFormData({...formData, hba1c_init: e.target.value})}
+                          className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white"
+                        />
+                      </div>
+                    </div>
+                    
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">ชื่อจริงคนไข้ *</label>
@@ -1554,7 +1490,7 @@ const getHbA1cChartData = (patient, visits = []) => {
 
                 {selectedPatient && (
                   <div className="space-y-6">
-                    {renderSVGChart(getHbA1cChartData(selectedPatient, patientVisits),'hba1c', '#2563eb','📊 พัฒนาการระดับ HbA1c (%)', 4, 14, '%',true)}
+                    {renderSVGChart(getHbA1cChartData(selectedPatient, selectedPatient.visits),'hba1c', '#2563eb','📊 พัฒนาการระดับ HbA1c (%)', 4, 14, '%',true)}
                     {renderSVGChart(selectedPatient.visits, 'weight', '#10b981', 'แนวโน้มการเปลี่ยนแปลงน้ำหนักตัว (kg)', 40.0, 110.0, 'kg')}
                     {renderSVGChart(selectedPatient.visits, 'smbg', '#f59e0b', 'ค่าเฉลี่ยตรวจน้ำตาลปลายนิ้วรายวัน SMBG (mg/dL)', 70, 220, 'mg/dL')}
 
