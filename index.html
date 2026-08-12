@@ -820,7 +820,72 @@ const getHbA1cChartData = (patient, visits = []) => {
 
   return uniquePoints;
 };
-     const renderSVGChart = (data, dataKey, color, title, minVal, maxVal, unit, isHbA1cLimit = false) => {
+// 📊 ฟังก์ชันเตรียมข้อมูล HbA1c รวมทุกจุด (แรกรับ, Follow-up, หยุดยา, Remission)
+    const getHbA1cChartData = (patient, visits = []) => {
+      if (!patient) return [];
+      const chartPoints = [];
+
+      // 1. จุดแรกรับ (ดึง hba1c_init_date วันที่เจาะจริงย้อนหลัง)
+      const initHbA1c = patient.hba1c_init || patient.hba1c;
+      if (initHbA1c && parseFloat(initHbA1c) > 0) {
+        chartPoints.push({
+          date: patient.hba1c_init_date || patient.registered_date || patient.created_at,
+          hba1c: parseFloat(initHbA1c),
+          label: 'แรกรับ'
+        });
+      }
+
+      // 2. จุดติดตามผล (Visits)
+      if (visits && visits.length > 0) {
+        visits.forEach(visit => {
+          const vHbA1c = visit.hba1c;
+          if (vHbA1c && parseFloat(vHbA1c) > 0) {
+            chartPoints.push({
+              date: visit.hba1c_date || visit.visit_date || visit.created_at,
+              hba1c: parseFloat(vHbA1c),
+              label: visit.notes || 'ติดตามผล'
+            });
+          }
+        });
+      }
+
+      // 3. จุดวันที่หยุดยา / ปรับลดยา
+      const stoppedDate = patient.stopped_date || patient.off_med_date;
+      const stoppedHbA1c = patient.stopped_hba1c || patient.off_med_hba1c;
+      if (stoppedDate && stoppedHbA1c) {
+        chartPoints.push({
+          date: stoppedDate,
+          hba1c: parseFloat(stoppedHbA1c),
+          label: '💊 หยุดยา'
+        });
+      }
+
+      // 4. จุดวันที่ Remission สำเร็จ
+      if (patient.remission_date && patient.remission_hba1c) {
+        chartPoints.push({
+          date: patient.remission_date,
+          hba1c: parseFloat(patient.remission_hba1c),
+          label: '🎉 Remission'
+        });
+      }
+
+      // เรียงลำดับตามวันที่จากอดีต -> ปัจจุบัน
+      chartPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      // กรองเอาเฉพาะวันที่ไม่ซ้ำกัน
+      const uniquePoints = [];
+      const seenDates = new Set();
+      chartPoints.forEach(pt => {
+        const formattedDate = pt.date ? pt.date.split('T')[0] : '';
+        if (formattedDate && !seenDates.has(formattedDate)) {
+          seenDates.add(formattedDate);
+          uniquePoints.push(pt);
+        }
+      });
+
+      return uniquePoints;
+    };    
+      const renderSVGChart = (data, dataKey, color, title, minVal, maxVal, unit, isHbA1cLimit = false) => {
   if (!data || data.length === 0) {
     return (
       <div className="text-slate-400 text-xs py-8 text-center bg-slate-50 rounded-lg border border-slate-100">
