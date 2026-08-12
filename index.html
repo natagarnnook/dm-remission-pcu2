@@ -767,17 +767,21 @@
      // 2. จุดจากการติดตามผล (Visits / Follow-up)
         if (visits && visits.length > 0) {
           visits.forEach(visit => {
-            // ดึงค่ามาตรงๆ (ห้ามใส่ || patient.hba1c เด็ดขาด)
             const vHbA1c = visit.hba1c; 
             
-            // ปรับเงื่อนไขเช็คให้รัดกุมขึ้น: ตรวจสอบว่าไม่ว่าง และมากกว่า 0 จริงๆ
-            if (vHbA1c !== undefined && vHbA1c !== null && vHbA1c !== "" && parseFloat(vHbA1c) > 0) {
+            // ตรวจสอบว่ามีค่าและมากกว่า 0 หรือไม่
+            const hasHbA1c = vHbA1c !== undefined && vHbA1c !== null && vHbA1c !== "" && parseFloat(vHbA1c) > 0;
+
+            // ถ้า "มีค่า HbA1c" (hasHbA1c เป็น true) ถึงจะ push ข้อมูลเข้าไป
+            if (hasHbA1c) {
               chartPoints.push({
                 date: visit.hba1c_date || visit.visit_date || visit.created_at || visit.date,
                 hba1c: parseFloat(vHbA1c),
                 label: visit.notes || 'ติดตามผล'
               });
             }
+            // ถ้าไม่มีค่า (hasHbA1c เป็น false) ระบบจะข้ามไปเลย ไม่บันทึกวันที่ลงกราฟ
+            
           });
         }
 
