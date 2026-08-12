@@ -759,7 +759,7 @@
         const initHbA1c = patient.hba1c_init || patient.hba1c;
         if (initHbA1c && parseFloat(initHbA1c) > 0) {
           chartPoints.push({
-            date: patient.hba1c_init_date || patient.created_at,
+            date: patient.hba1c_init_date,
             hba1c: parseFloat(initHbA1c),
             label: 'แรกรับ'
           });
