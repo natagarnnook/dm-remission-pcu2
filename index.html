@@ -750,67 +750,57 @@
         );
       };
 
-      // ฟังก์ชันรวบรวมและจัดเรียงจุดข้อมูล HbA1c ส่งเข้า renderSVGChart
+     // ฟังก์ชันรวบรวมและจัดเรียงจุดข้อมูล HbA1c ส่งเข้า renderSVGChart
       const getHbA1cChartData = (patient, visits = []) => {
         if (!patient) return [];
         const chartPoints = [];
+        let lastHbA1c = null; // ตัวแปรเก็บค่า HbA1c ล่าสุดไว้ใช้กรณีไม่มีเลือดแต่มีการหยุดยา
 
-        // 1. จุดแรกรับ (ดึง hba1c_init_date วันที่เจาะจริงย้อนหลัง)
+        // 1. จุดแรกรับ (แสดงเฉพาะคนที่มี "วันที่เจาะแรกรับ" จริงๆ ไม่ใช่วันลงทะเบียน)
         const initHbA1c = patient.hba1c_init || patient.hba1c;
-        if (initHbA1c && parseFloat(initHbA1c) > 0) {
+        if (initHbA1c && parseFloat(initHbA1c) > 0 && patient.hba1c_init_date) {
+          lastHbA1c = parseFloat(initHbA1c);
           chartPoints.push({
             date: patient.hba1c_init_date,
-            hba1c: parseFloat(initHbA1c),
+            hba1c: lastHbA1c,
             label: 'แรกรับ'
           });
         }
-     // 2. จุดจากการติดตามผล (Visits / Follow-up)
+
+        // 2. จุดจากการติดตามผล (Visits / Follow-up) และแทรกจุด Remission/หยุดยา
         if (visits && visits.length > 0) {
           visits.forEach(visit => {
             const vHbA1c = visit.hba1c; 
-            
-            // ตรวจสอบว่ามีค่าและมากกว่า 0 หรือไม่
             const hasHbA1c = vHbA1c !== undefined && vHbA1c !== null && vHbA1c !== "" && parseFloat(vHbA1c) > 0;
 
-            // ถ้า "มีค่า HbA1c" (hasHbA1c เป็น true) ถึงจะ push ข้อมูลเข้าไป
+            // กำหนดข้อความ Label ตามแผนการปรับยา
+            let eventLabel = 'ติดตามผล';
+            if (visit.action === 'remission') eventLabel = '🎉 Remission';
+            else if (visit.action === 'stopped') eventLabel = '🛑 หยุดยา';
+
             if (hasHbA1c) {
+              lastHbA1c = parseFloat(vHbA1c);
               chartPoints.push({
-                date: visit.hba1c_date || visit.visit_date || visit.created_at || visit.date,
-                hba1c: parseFloat(vHbA1c),
-                label: visit.notes || 'ติดตามผล'
+                date: visit.date,
+                hba1c: lastHbA1c,
+                label: eventLabel
+              });
+            } else if ((visit.action === 'remission' || visit.action === 'stopped') && lastHbA1c !== null) {
+              // ถ้าไม่มีผลเลือด แต่วันนั้นคือวันหยุดยา หรือ Remission 
+              // ให้ยืมค่าเลือดรอบที่แล้วมาพล็อต เพื่อให้เหตุการณ์นี้ไปโชว์ในกราฟไทม์ไลน์ได้
+              chartPoints.push({
+                date: visit.date,
+                hba1c: lastHbA1c,
+                label: eventLabel
               });
             }
-            // ถ้าไม่มีค่า (hasHbA1c เป็น false) ระบบจะข้ามไปเลย ไม่บันทึกวันที่ลงกราฟ
-            
           });
         }
 
-        // 3. จุดวันที่หยุดยา / ปรับลดยา
-        const stoppedDate = patient.stopped_date || patient.off_med_date || patient.stoppedDate;
-        const stoppedHbA1c = patient.stopped_hba1c || patient.off_med_hba1c;
-        if (stoppedDate && stoppedHbA1c) {
-          chartPoints.push({
-            date: stoppedDate,
-            hba1c: parseFloat(stoppedHbA1c),
-            label: '💊 หยุดยา'
-          });
-        }
-
-        // 4. จุดวันที่ Remission สำเร็จ
-        const remissionDate = patient.remission_date;
-        const remissionHbA1c = patient.remission_hba1c;
-        if (remissionDate && remissionHbA1c) {
-          chartPoints.push({
-            date: remissionDate,
-            hba1c: parseFloat(remissionHbA1c),
-            label: '🎉 Remission'
-          });
-        }
-
-        // 5. เรียงลำดับตามวันที่จากอดีต -> ปัจจุบัน
+        // 3. เรียงลำดับตามวันที่จากอดีต -> ปัจจุบัน
         chartPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        // 6. ขจัดข้อมูลวันที่ซ้ำกัน
+        // 4. ขจัดข้อมูลวันที่ซ้ำกัน
         const uniquePoints = [];
         const seenDates = new Set();
 
@@ -823,103 +813,6 @@
         });
 
         return uniquePoints;
-      };
-
-      const renderSVGChart = (data, dataKey, color, title, minVal, maxVal, unit, isHbA1cLimit = false) => {
-        if (!data || data.length === 0) {
-          return (
-            <div className="text-slate-400 text-xs py-8 text-center bg-slate-50 rounded-lg border border-slate-100">
-              ไม่มีข้อมูลเพียงพอสำหรับวาดกราฟ
-            </div>
-          );
-        }
-
-        const width = 800;
-        const height = 210; // ความสูงเผื่อวางวันที่บนแกน X
-        const padding = 40;
-        const chartWidth = width - padding * 2;
-        const chartHeight = height - padding * 2;
-
-        const values = data.map(d => d[dataKey] || 0);
-        const min = minVal !== undefined ? minVal : Math.min(...values) * 0.95;
-        const max = maxVal !== undefined ? maxVal : Math.max(...values) * 1.05;
-        const range = max - min || 1;
-
-        // คำนวณพิกัด X, Y
-        const points = data.map((d, index) => {
-          const x = data.length === 1 
-            ? padding + chartWidth / 2 
-            : padding + (index / (data.length - 1)) * chartWidth;
-          const y = height - padding - (((d[dataKey] || 0) - min) / range) * chartHeight;
-          return { x, y, val: d[dataKey], date: d.date, label: d.label };
-        });
-
-        // สร้างเส้นกราฟ
-        const pathD = points.reduce((acc, p, i) => i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`, '');
-
-        // แปลงวันที่เป็น พ.ศ. ไทย (เช่น 15/01/2567)
-        const formatDate = (dateStr) => {
-          if (!dateStr) return '';
-          const d = new Date(dateStr);
-          if (isNaN(d.getTime())) return dateStr;
-          const day = String(d.getDate()).padStart(2, '0');
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          const year = d.getFullYear() + 543;
-          return `${day}/${month}/${year}`;
-        };
-
-        return (
-          <div className="w-full overflow-x-auto bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
-            <div className="text-sm font-bold text-slate-700 mb-3 flex items-center justify-between">
-              <span>{title}</span>
-              <span className="text-xs font-normal text-slate-500">หน่วย: {unit}</span>
-            </div>
-            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
-              {/* เส้นเกณฑ์ Remission 6.5% */}
-              {isHbA1cLimit && (
-                <g>
-                  {(() => {
-                    const limitY = height - padding - (((6.5) - min) / range) * chartHeight;
-                    return (
-                      <>
-                        <line x1={padding} y1={limitY} x2={width - padding} y2={limitY} stroke="#ef4444" strokeDasharray="4 4" strokeWidth="1.5" />
-                        <text x={width - padding + 5} y={limitY + 4} fill="#ef4444" fontSize="10" fontWeight="bold">เกณฑ์ 6.5%</text>
-                      </>
-                    );
-                  })()}
-                </g>
-              )}
-
-              {/* เส้นกราฟ */}
-              <path d={pathD} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-
-              {/* จุดพล็อต + ค่าตัวเลข + Label + วันที่แกน X */}
-              {points.map((p, i) => (
-                <g key={i}>
-                  {/* จุดวงกลม */}
-                  <circle cx={p.x} cy={p.y} r="6" fill={color} stroke="#ffffff" strokeWidth="2.5" />
-                  
-                  {/* ตัวเลขค่า HbA1c เหนือจุด */}
-                  <text x={p.x} y={p.y - 12} textAnchor="middle" fill="#1e293b" fontSize="12" fontWeight="bold">
-                    {p.val}
-                  </text>
-
-                  {/* ข้อความกำกับจุด เช่น 'หยุดยา' หรือ 'Remission' (ถ้ามี) */}
-                  {p.label && (
-                    <text x={p.x} y={p.y + 18} textAnchor="middle" fill="#2563eb" fontSize="9" fontWeight="bold">
-                      {p.label}
-                    </text>
-                  )}
-
-                  {/* 📅 วันที่เจาะ HbA1c ที่แกน X ด้านล่าง */}
-                  <text x={p.x} y={height - 10} textAnchor="middle" fill="#64748b" fontSize="11" fontWeight="500">
-                    {formatDate(p.date)}
-                  </text>
-                </g>
-              ))}
-            </svg>
-          </div>
-        );
       };
 
       if (!currentUser) {
