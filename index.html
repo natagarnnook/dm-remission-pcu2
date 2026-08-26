@@ -760,20 +760,18 @@
       const getHbA1cChartData = (patient, visits = []) => {
         if (!patient) return [];
         const chartPoints = [];
-        let lastHbA1c = null; 
 
-        // 1. จุดแรกรับ (แสดงเฉพาะคนที่มี "วันที่เจาะแรกรับ" จริงๆ ไม่ใช่วันลงทะเบียน)
-        const initHbA1c = patient.hba1c_init || patient.hba1c;
-        if (initHbA1c && parseFloat(initHbA1c) > 0 && patient.hba1c_init_date) {
-          lastHbA1c = parseFloat(initHbA1c);
+        // 1. จุดแรกรับ: ดึงเฉพาะค่า hba1c_init ที่กรอกตอนแรกรับจริงๆ ไม่ดึงค่าล่าสุดมาปน
+        const initHbA1c = patient.hba1c_init;
+        if (initHbA1c !== undefined && initHbA1c !== null && initHbA1c !== "" && parseFloat(initHbA1c) > 0 && patient.hba1c_init_date) {
           chartPoints.push({
             date: patient.hba1c_init_date,
-            hba1c: lastHbA1c,
+            hba1c: parseFloat(initHbA1c),
             label: 'แรกรับ'
           });
         }
 
-        // 2. จุดจากการติดตามผล (Visits / Follow-up) และแทรกจุด Remission/หยุดยา
+        // 2. จุดจากการติดตามผล (Visits / Follow-up)
         if (visits && visits.length > 0) {
           visits.forEach(visit => {
             const vHbA1c = visit.hba1c; 
@@ -783,18 +781,11 @@
             if (visit.action === 'remission') eventLabel = '🎉 Remission';
             else if (visit.action === 'stopped') eventLabel = '🛑 หยุดยา';
 
+            // พล็อตจุดเฉพาะวันที่มีการกรอกค่า HbA1c จริงๆ เท่านั้น (ตัดเงื่อนไขยืมค่าเดิมออก)
             if (hasHbA1c) {
-              lastHbA1c = parseFloat(vHbA1c);
               chartPoints.push({
                 date: visit.date,
-                hba1c: lastHbA1c,
-                label: eventLabel
-              });
-            } else if ((visit.action === 'remission' || visit.action === 'stopped') && lastHbA1c !== null) {
-              // แทรกจุดในกราฟตอนทำผลสำเร็จ (แม้ไม่ได้เจาะเลือดวันนั้น) เพื่อให้เห็นว่าหยุดยาวันไหน
-              chartPoints.push({
-                date: visit.date,
-                hba1c: lastHbA1c,
+                hba1c: parseFloat(vHbA1c),
                 label: eventLabel
               });
             }
@@ -908,7 +899,6 @@
           </div>
         );
       };
-
       if (!currentUser) {
         return (
           <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
