@@ -626,7 +626,7 @@
           date: visitFormData.date,
           weight: parseFloat(visitFormData.weight) || selectedPatient.weight,
           smbg: parseInt(visitFormData.smbg) || 110,
-          hba1c: visitFormData.hba1c ? parseFloat(visitFormData.hba1c) : null, // แก้ไขที่ 2: ถ้าไม่ได้กรอก จะปล่อยเป็น null ไม่ดึงค่าเก่ามาใส่
+          hba1c: visitFormData.hba1c ? parseFloat(visitFormData.hba1c) : null,
           action: visitFormData.action,
           note: visitFormData.note || 'ตรวจติดตามการรักษาตามขั้นตอนประเมินสภาวะสงบ',
           meds: formattedMeds,
@@ -642,6 +642,41 @@
           legSFat: visitFormData.legSFat ? parseFloat(visitFormData.legSFat) : null,
           legMuscle: visitFormData.legMuscle ? parseFloat(visitFormData.legMuscle) : null
         };
+
+        // 🟢 1. สร้าง Object ข้อมูลใหม่ให้เสร็จสมบูรณ์ก่อน
+        const updatedVisits = [...selectedPatient.visits, newVisit].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const latestVisit = updatedVisits[updatedVisits.length - 1];
+        
+        const latestValidHba1cVisit = [...updatedVisits].reverse().find(v => v.hba1c !== null && v.hba1c !== undefined && v.hba1c !== "");
+        const displayHba1c = latestValidHba1cVisit ? latestValidHba1cVisit.hba1c : selectedPatient.hba1c_init;
+
+        const updatedPatientObj = {
+          ...selectedPatient,
+          visits: updatedVisits,
+          weight: latestVisit.weight,
+          hba1c: displayHba1c, 
+          status: latestVisit.action,
+          previousMedications: formattedMeds,
+          bmi: parseFloat((latestVisit.weight / ((selectedPatient.height / 100) * (selectedPatient.height / 100))).toFixed(1)),
+          stoppedDate: finalStoppedDate
+        };
+
+        // 🟢 2. อัปเดตข้อมูลขึ้นหน้าจอ
+        setPatients(prev => prev.map(p => p.id === selectedPatient.id ? updatedPatientObj : p));
+
+        // 🟢 3. ส่งข้อมูลที่สมบูรณ์แล้วไปบันทึกบน Supabase ทันที
+        syncPatientToSupabase(updatedPatientObj);
+
+        // ล้างค่าแบบฟอร์มหลังบันทึกเสร็จ
+        setVisitFormData({
+          date: new Date().toISOString().split('T')[0], weight: '', smbg: '', hba1c: '', action: 'same', note: '', stoppedDate: '',
+          fatPercentage: '', sFatPercentage: '', musclePercentage: '', visceralFat: '', restingMetabolism: '',
+          armSFat: '', armMuscle: '', trunkSFat: '', trunkMuscle: '', legSFat: '', legMuscle: ''
+        });
+        setVisitMeds(defaultMedList);
+        setInfoMessage(`บันทึกการติดตามคนไข้ ${selectedPatient.firstName} เรียบร้อยแล้ว`);
+        setTimeout(() => setInfoMessage(null), 5000);
+      };
 
         let updatedPatientObj = null;
         setPatients(prev => prev.map(p => {
