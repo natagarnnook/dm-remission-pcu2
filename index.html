@@ -1470,6 +1470,27 @@
 
                 {selectedPatient && (
                   <div className="space-y-6">
+                    {/* 🟢 ส่วนที่เพิ่มใหม่: ป้ายแสดงวันที่หยุดยา/Remission แยกออกมาต่างหาก */}
+                    {(selectedPatient.status === 'stopped' || selectedPatient.status === 'remission') && selectedPatient.stoppedDate && (
+                      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 p-4 md:p-5 rounded-2xl flex items-center gap-4 shadow-sm animate-fadeIn">
+                        <div className="bg-gradient-to-br from-emerald-400 to-teal-500 text-white p-3 rounded-xl shadow-md">
+                          <Icon name={selectedPatient.status === 'remission' ? 'award' : 'user-minus'} size={28} />
+                        </div>
+                        <div>
+                          <h4 className="text-emerald-900 font-extrabold text-sm md:text-base">
+                            {selectedPatient.status === 'remission' 
+                              ? '🎉 ยินดีด้วย! ผู้ป่วยบรรลุเป้าหมายเบาหวานสงบ (Remission)' 
+                              : '🛑 ผู้ป่วยสามารถหยุดใช้ยาเบาหวานได้สำเร็จ'}
+                          </h4>
+                          <div className="text-emerald-700 text-xs font-bold mt-1.5 flex items-center gap-2">
+                            <span>วันที่ทำสำเร็จ:</span>
+                            <span className="bg-white px-2.5 py-1 rounded-lg text-emerald-800 shadow-sm border border-emerald-100">
+                              {selectedPatient.stoppedDate}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {renderSVGChart(getHbA1cChartData(selectedPatient, selectedPatient.visits),'hba1c', '#2563eb','📊 พัฒนาการระดับ HbA1c (%)', 4, 14, '%',true)}
                     {renderSVGChart(selectedPatient.visits, 'weight', '#10b981', 'แนวโน้มการเปลี่ยนแปลงน้ำหนักตัว (kg)', 40.0, 110.0, 'kg')}
                     {renderSVGChart(selectedPatient.visits, 'smbg', '#f59e0b', 'ค่าเฉลี่ยตรวจน้ำตาลปลายนิ้วรายวัน SMBG (mg/dL)', 70, 220, 'mg/dL')}
