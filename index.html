@@ -585,7 +585,7 @@
           weight: regWeight,
           height: regHeight,
           bmi: regBmi,
-          hba1c: regHba1c, // เก็บไว้แสดงผลในตาราง
+          hba1c: regHba1c, 
           hba1c_init: regHba1c,
           hba1c_init_date: formData.hba1c_init_date,
           status: formData.status,
@@ -596,7 +596,7 @@
             date: regDateToday,
             weight: regWeight,
             smbg: formData.hasGlucometer ? 120 : 0, 
-            hba1c: null, // แก้ไขที่ 1: บันทึกเป็น null เพื่อไม่ให้กราฟเอาวันที่ลงทะเบียนไปพลอตจุดเพิ่ม
+            hba1c: null, 
             action: formData.status,
             note: "ลงทะเบียนแรกรับประเมินผลเบาหวานสงบ",
             meds: formattedMeds
@@ -643,7 +643,7 @@
           legMuscle: visitFormData.legMuscle ? parseFloat(visitFormData.legMuscle) : null
         };
 
-        // 🟢 1. สร้าง Object ข้อมูลใหม่ให้เสร็จสมบูรณ์ก่อน
+        // 🟢 สร้าง Object ข้อมูลใหม่ให้เสร็จสมบูรณ์
         const updatedVisits = [...selectedPatient.visits, newVisit].sort((a, b) => new Date(a.date) - new Date(b.date));
         const latestVisit = updatedVisits[updatedVisits.length - 1];
         
@@ -661,52 +661,13 @@
           stoppedDate: finalStoppedDate
         };
 
-        // 🟢 2. อัปเดตข้อมูลขึ้นหน้าจอ
+        // 🟢 อัปเดตข้อมูลขึ้นหน้าจอ
         setPatients(prev => prev.map(p => p.id === selectedPatient.id ? updatedPatientObj : p));
 
-        // 🟢 3. ส่งข้อมูลที่สมบูรณ์แล้วไปบันทึกบน Supabase ทันที
+        // 🟢 ส่งข้อมูลที่สมบูรณ์แล้วไปบันทึกบน Supabase ทันที
         syncPatientToSupabase(updatedPatientObj);
 
         // ล้างค่าแบบฟอร์มหลังบันทึกเสร็จ
-        setVisitFormData({
-          date: new Date().toISOString().split('T')[0], weight: '', smbg: '', hba1c: '', action: 'same', note: '', stoppedDate: '',
-          fatPercentage: '', sFatPercentage: '', musclePercentage: '', visceralFat: '', restingMetabolism: '',
-          armSFat: '', armMuscle: '', trunkSFat: '', trunkMuscle: '', legSFat: '', legMuscle: ''
-        });
-        setVisitMeds(defaultMedList);
-        setInfoMessage(`บันทึกการติดตามคนไข้ ${selectedPatient.firstName} เรียบร้อยแล้ว`);
-        setTimeout(() => setInfoMessage(null), 5000);
-      };
-
-        let updatedPatientObj = null;
-        setPatients(prev => prev.map(p => {
-          if (p.id === selectedPatient.id) {
-            const updatedVisits = [...p.visits, newVisit].sort((a, b) => new Date(a.date) - new Date(b.date));
-            const latestVisit = updatedVisits[updatedVisits.length - 1];
-            
-            // ค้นหาค่า HbA1c ล่าสุดที่มีการกรอกจริงๆ (ไม่เป็น null) เพื่อไปแสดงในหน้าจอข้อมูลรวม
-            const latestValidHba1cVisit = [...updatedVisits].reverse().find(v => v.hba1c !== null && v.hba1c !== undefined && v.hba1c !== "");
-            const displayHba1c = latestValidHba1cVisit ? latestValidHba1cVisit.hba1c : p.hba1c;
-
-            updatedPatientObj = {
-              ...p,
-              visits: updatedVisits,
-              weight: latestVisit.weight,
-              hba1c: displayHba1c, // แก้ไขที่ 3: อัปเดตตารางด้วยค่าล่าสุดที่เคยเจาะจริงๆ
-              status: latestVisit.action,
-              previousMedications: formattedMeds,
-              bmi: parseFloat((latestVisit.weight / ((p.height / 100) * (p.height / 100))).toFixed(1)),
-              stoppedDate: finalStoppedDate
-            };
-            return updatedPatientObj;
-          }
-          return p;
-        }));
-
-        if (updatedPatientObj) {
-          syncPatientToSupabase(updatedPatientObj);
-        }
-
         setVisitFormData({
           date: new Date().toISOString().split('T')[0], weight: '', smbg: '', hba1c: '', action: 'same', note: '', stoppedDate: '',
           fatPercentage: '', sFatPercentage: '', musclePercentage: '', visceralFat: '', restingMetabolism: '',
